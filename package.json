@@ -1,0 +1,47 @@
+{
+  "name": "ownremote",
+  "version": "1.0.0",
+  "description": "Control your Windows PC from your phone: trackpad, live keyboard and screen preview over LAN or Cloudflare Tunnel.",
+  "keywords": [
+    "remote",
+    "mouse",
+    "trackpad",
+    "keyboard",
+    "remote-desktop",
+    "windows",
+    "express",
+    "websocket",
+    "cloudflare-tunnel",
+    "cli"
+  ],
+  "homepage": "https://github.com/Adytm404/ownremote#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adytm404/ownremote.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Adytm404/ownremote/issues"
+  },
+  "license": "MIT",
+  "author": "Adytm404",
+  "main": "cli.js",
+  "bin": {
+    "ownremote": "cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "daemon": "node src/daemon.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "win32"
+  ],
+  "private": true,
+  "dependencies": {
+    "express": "^5.3.0",
+    "qrcode-terminal": "^0.12.0",
+    "ws": "^8.22.0"
+  }
+}

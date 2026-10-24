@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#0d0f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>OwnRemote</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c6f45b' d='M5 3l14 7-6 2-2 6z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ============ Layar pairing ============ -->
+  <main id="pairScreen" class="screen pair hidden">
+    <div class="pair-card">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/></svg>
+        <span>OwnRemote</span>
+      </div>
+      <h1>Hubungkan ke PC</h1>
+      <p class="muted">Masukkan 6 digit kode yang tampil di terminal PC.</p>
+
+      <form id="pairForm" autocomplete="off">
+        <label class="code-field" for="codeInput">
+          <input id="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="Kode pairing">
+          <span class="code-slots" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+          </span>
+        </label>
+        <input id="nameInput" class="text-input" maxlength="40" placeholder="Nama perangkat (opsional)">
+        <button id="pairBtn" class="primary" type="submit">Hubungkan</button>
+        <p id="pairError" class="error" role="alert"></p>
+      </form>
+    </div>
+  </main>
+
+  <!-- ============ Layar trackpad ============ -->
+  <main id="padScreen" class="screen pad-screen hidden">
+    <header class="topbar">
+      <div class="conn">
+        <i id="connDot" class="dot"></i>
+        <div>
+          <strong id="pcName">PC</strong>
+          <small id="connText">Menghubungkan…</small>
+        </div>
+      </div>
+      <div class="top-actions">
+      <button id="screenBtn" class="icon-btn" aria-label="Lihat layar PC" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7v2H8v2h8v-2h-2v-2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 13H3V5h18z"/></svg>
+      </button>
+      <button id="kbBtn" class="icon-btn" aria-label="Keyboard" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zM11 8h2v2h-2zm0 3h2v2h-2zM8 8h2v2H8zm0 3h2v2H8zm-1 2H5v-2h2zm0-3H5V8h2zm9 7H8v-2h8zm0-4h-2v-2h2zm0-3h-2V8h2zm3 3h-2v-2h2zm0-3h-2V8h2z"/></svg>
+      </button>
+      <button id="settingsBtn" class="icon-btn" aria-label="Pengaturan">
+        <svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7zm7.4-2.5a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1c.5.4 1.1.7 1.7 1l.4 2.7h4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.4z"/></svg>
+      </button>
+      </div>
+    </header>
+
+    <!-- preview layar PC (hanya aktif saat tombol layar ditekan) -->
+    <section id="screenPanel" class="screen-view hidden" aria-label="Layar PC">
+      <div id="stage" class="stage">
+        <div id="stageInner" class="stage-inner">
+          <img id="screenImg" alt="" draggable="false">
+          <div id="vCursor" class="vcursor hidden">
+            <svg viewBox="0 0 24 24"><path d="M1 1v18.5l5.2-5 3.4 7.7 3.3-1.5-3.4-7.6H17z"/></svg>
+          </div>
+        </div>
+        <div id="screenMsg" class="stage-msg">Memuat layar…</div>
+      </div>
+      <div class="stage-bar">
+        <button id="zoomBtn" class="chip" aria-label="Zoom mengikuti cursor">Zoom 1×</button>
+        <button id="qualityBtn" class="chip" aria-label="Kualitas">Normal</button>
+        <button id="expandBtn" class="chip" aria-label="Perbesar preview">⤢</button>
+        <span id="screenStats" class="stats"></span>
+      </div>
+    </section>
+
+    <section id="touchpad" class="touchpad" aria-label="Trackpad">
+      <div class="pad-hint" id="padHint">
+        <span><b>1 jari</b> geser = gerak</span>
+        <span><b>tap</b> = klik kiri</span>
+        <span><b>tap 2 jari</b> = klik kanan</span>
+        <span><b>2 jari</b> geser = scroll</span>
+        <span><b>tahan</b> lalu geser = drag</span>
+      </div>
+      <div id="dragBadge" class="drag-badge hidden">DRAG</div>
+      <div id="scrollStrip" class="scroll-strip" aria-label="Scroll"></div>
+    </section>
+
+    <!-- panel keyboard: ketikan langsung terkirim ke PC -->
+    <section id="kbPanel" class="kb hidden" aria-label="Keyboard">
+      <div class="kb-row">
+        <button class="kk mod" data-mod="1">Ctrl</button>
+        <button class="kk mod" data-mod="2">Alt</button>
+        <button class="kk mod" data-mod="4">Shift</button>
+        <button class="kk mod" data-mod="8">Win</button>
+        <button class="kk" data-key="esc">Esc</button>
+        <button class="kk" data-key="tab">Tab</button>
+      </div>
+      <div class="kb-row">
+        <button class="kk" data-key="left" data-repeat aria-label="Kiri">←</button>
+        <button class="kk" data-key="up" data-repeat aria-label="Atas">↑</button>
+        <button class="kk" data-key="down" data-repeat aria-label="Bawah">↓</button>
+        <button class="kk" data-key="right" data-repeat aria-label="Kanan">→</button>
+        <button class="kk" data-key="home">Home</button>
+        <button class="kk" data-key="end">End</button>
+        <button class="kk" data-key="delete" data-repeat>Del</button>
+      </div>
+      <div class="kb-chips">
+        <button class="chip" data-char="c" data-mods="1">Ctrl+C</button>
+        <button class="chip" data-char="v" data-mods="1">Ctrl+V</button>
+        <button class="chip" data-char="x" data-mods="1">Ctrl+X</button>
+        <button class="chip" data-char="z" data-mods="1">Ctrl+Z</button>
+        <button class="chip" data-char="a" data-mods="1">Ctrl+A</button>
+        <button class="chip" data-char="s" data-mods="1">Ctrl+S</button>
+        <button class="chip" data-key="tab" data-mods="2">Alt+Tab</button>
+        <button class="chip" data-char="d" data-mods="8">Win+D</button>
+        <button class="chip" data-key="f5">F5</button>
+        <button class="chip" data-key="f11">F11</button>
+        <button class="chip" data-key="prev" aria-label="Lagu sebelumnya">⏮</button>
+        <button class="chip" data-key="playpause" aria-label="Play/Pause">⏯</button>
+        <button class="chip" data-key="next" aria-label="Lagu berikutnya">⏭</button>
+        <button class="chip" data-key="volumedown" aria-label="Volume turun">🔉</button>
+        <button class="chip" data-key="volumeup" aria-label="Volume naik">🔊</button>
+        <button class="chip" data-key="mute" aria-label="Mute">🔇</button>
+      </div>
+      <div class="kb-input">
+        <textarea id="kbInput" rows="1" enterkeyhint="enter" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Ketik ke PC"></textarea>
+        <span class="kb-placeholder" id="kbPlaceholder">Ketik di sini, langsung muncul di PC</span>
+        <button class="kk icon" data-key="backspace" data-repeat aria-label="Backspace">⌫</button>
+        <button class="kk icon accent" data-key="enter" aria-label="Enter">⏎</button>
+      </div>
+    </section>
+
+    <footer class="buttons">
+      <button class="mbtn" data-btn="l">Kiri</button>
+      <button class="mbtn mid" data-btn="m" aria-label="Klik tengah"><i></i></button>
+      <button class="mbtn" data-btn="r">Kanan</button>
+    </footer>
+
+    <!-- overlay status koneksi -->
+    <div id="overlay" class="overlay hidden">
+      <div class="overlay-card">
+        <p id="overlayText">Terputus</p>
+        <button id="reconnectBtn" class="primary">Hubungkan lagi</button>
+      </div>
+    </div>
+
+    <!-- panel pengaturan -->
+    <div id="sheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-backdrop" data-close></div>
+      <div class="sheet-panel" role="dialog" aria-label="Pengaturan">
+        <div class="sheet-grip"></div>
+        <h2>Pengaturan</h2>
+        <label class="setting">
+          <span>Kecepatan cursor <output id="sensOut"></output></span>
+          <input id="sens" type="range" min="0.5" max="4" step="0.1">
+        </label>
+        <label class="setting">
+          <span>Akselerasi <output id="accelOut"></output></span>
+          <input id="accel" type="range" min="0" max="2" step="0.1">
+        </label>
+        <label class="setting">
+          <span>Kecepatan scroll <output id="scrollOut"></output></span>
+          <input id="scrollSpeed" type="range" min="1" max="12" step="0.5">
+        </label>
+        <label class="toggle"><span>Scroll natural (seperti HP)</span><input id="natural" type="checkbox"><i></i></label>
+        <label class="toggle"><span>Getar saat klik</span><input id="haptic" type="checkbox"><i></i></label>
+
+        <h3 class="sheet-section">Preview layar PC</h3>
+        <div class="preset-row">
+          <button class="preset" data-screen-preset="saver">Hemat</button>
+          <button class="preset" data-screen-preset="normal">Normal</button>
+          <button class="preset" data-screen-preset="sharp">Jelas</button>
+        </div>
+        <label class="setting">
+          <span>Frame per detik <output id="screenFpsOut"></output></span>
+          <input id="screenFps" type="range" min="1" max="15" step="1">
+        </label>
+        <label class="setting">
+          <span>Resolusi</span>
+          <select id="screenWidth" class="select">
+            <option value="640">640 px (hemat)</option>
+            <option value="960">960 px</option>
+            <option value="1280">1280 px</option>
+            <option value="1600">1600 px</option>
+            <option value="1920">1920 px (asli Full HD)</option>
+          </select>
+        </label>
+        <label class="setting">
+          <span>Kualitas gambar <output id="screenQualityOut"></output></span>
+          <input id="screenQuality" type="range" min="20" max="90" step="5">
+        </label>
+        <p class="muted small" id="screenEstimate"></p>
+
+        <div class="sheet-actions">
+          <button id="fullscreenBtn" class="ghost">Layar penuh</button>
+          <button id="disconnectBtn" class="ghost">Putuskan</button>
+          <button id="forgetBtn" class="danger">Lupakan PC ini</button>
+        </div>
+        <p class="muted small" id="deviceInfo"></p>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
