@@ -237,8 +237,8 @@ class ScreenStreamer {
     this.busy = false;
     this.lastFrameAt = Date.now() + ERROR_RETRY_MS;
     const msg = /handle|invalid|operation/i.test(message)
-      ? 'Layar PC tidak bisa diambil (PC terkunci atau jendela UAC terbuka).'
-      : `Gagal mengambil layar: ${message}`;
+      ? "Can't capture the PC screen (the PC is locked or a UAC prompt is open)."
+      : `Screen capture failed: ${message}`;
     for (const ws of this.viewers.keys()) safeSend(ws, JSON.stringify({ t: 'screen-err', msg }));
     this.pump();
   }

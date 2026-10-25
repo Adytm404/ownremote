@@ -116,11 +116,11 @@ Tap 🖥. The preview only streams while it is on and pauses automatically when 
 
 | Preset | Frames | Width | Typical data while the screen changes |
 |---|---|---|---|
-| Hemat (saver) | 2 fps | 640 px | ≈ 30–60 KB/s |
+| Saver | 2 fps | 640 px | ≈ 30–60 KB/s |
 | **Normal** (default) | 5 fps | 960 px | ≈ 100–200 KB/s |
-| Jelas (sharp) | 8 fps | 1280 px | ≈ 300–500 KB/s |
+| Sharp | 8 fps | 1280 px | ≈ 300–500 KB/s |
 
-Fine-tune frames per second (1–15), resolution and image quality in ⚙ → *Preview layar PC*. The cursor position is sent separately about 60 times a second and predicted locally while your finger moves, so the virtual cursor stays smooth even at low frame rates. When the page is opened over the internet, it starts on the saver preset.
+Fine-tune frames per second (1–15), resolution and image quality in ⚙ → *PC screen preview*. The cursor position is sent separately about 60 times a second and predicted locally while your finger moves, so the virtual cursor stays smooth even at low frame rates. When the page is opened over the internet, it starts on the saver preset.
 
 ## CLI
 
@@ -206,7 +206,6 @@ src/logo.js             ASCII logo
 docs/                   screenshots and trailer
 ```
 
-The phone interface is currently in Indonesian; the CLI is in English.
 
 ## License
 

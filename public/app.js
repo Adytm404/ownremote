@@ -95,12 +95,12 @@
     if (pairing) return;
     const code = codeInput.value;
     if (code.length !== 6) {
-      fail('Kode harus 6 digit.');
+      fail('The code has 6 digits.');
       return;
     }
     pairing = true;
     $('pairBtn').disabled = true;
-    $('pairBtn').textContent = 'Menghubungkan…';
+    $('pairBtn').textContent = 'Connecting…';
     try {
       const res = await fetch('/api/pair', {
         method: 'POST',
@@ -117,11 +117,11 @@
       retry = 0;
       connect();
     } catch (err) {
-      fail(err instanceof TypeError ? 'Server tidak bisa dihubungi. Pastikan HP di Wi-Fi yang sama.' : err.message);
+      fail(err instanceof TypeError ? "Can't reach your PC. Make sure your phone is on the same Wi-Fi." : err.message);
     } finally {
       pairing = false;
       $('pairBtn').disabled = false;
-      $('pairBtn').textContent = 'Hubungkan';
+      $('pairBtn').textContent = 'Connect';
     }
 
     function fail(msg) {
@@ -141,7 +141,7 @@
     if (!token) return showPair();
     if (ws && ws.readyState <= 1) return;
     autoReconnect = true;
-    setConn('', 'Menghubungkan…');
+    setConn('', 'Connecting…');
 
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const sock = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`);
@@ -151,7 +151,7 @@
     sock.onopen = () => {
       retry = 0;
       hideOverlay();
-      setConn('on', 'Terhubung');
+      setConn('on', 'Connected');
       if (screenOn) subscribeScreen();
     };
 
@@ -165,7 +165,7 @@
       if (msg.t === 'hello') {
         $('pcName').textContent = msg.pc;
         store.set(PC_KEY, msg.pc);
-        $('deviceInfo').textContent = `Perangkat ini terdaftar sebagai "${msg.name}".`;
+        $('deviceInfo').textContent = `This device is paired as "${msg.name}".`;
       } else if (msg.t === 'pong') {
         clearTimeout(pongTimer);
       } else if (['cur', 'mon', 'screen-err', 'screen-off'].includes(msg.t)) {
@@ -181,15 +181,15 @@
 
       if (e.code === 4001) {
         forgetLocal();
-        showPair('Akses perangkat ini sudah dicabut dari PC. Masukkan kode lagi.');
+        showPair('This device was removed on the PC. Enter the code again.');
         return;
       }
-      if (e.code === 4003) return stopWith('Diputuskan', 'Koneksi diputuskan dari PC.');
-      if (e.code === 4002) return stopWith('Dipakai di tempat lain', 'Perangkat ini sedang terhubung dari tab/jendela lain.');
-      if (!autoReconnect) return stopWith('Terputus', 'Koneksi diputus.');
+      if (e.code === 4003) return stopWith('Disconnected', 'Disconnected from the PC.');
+      if (e.code === 4002) return stopWith('In use elsewhere', 'This device is connected from another tab or window.');
+      if (!autoReconnect) return stopWith('Disconnected', 'Connection closed.');
 
-      setConn('off', 'Terputus, mencoba lagi…');
-      if (retry >= 3) showOverlay('Tidak bisa terhubung ke PC. Pastikan server berjalan dan HP di Wi-Fi yang sama.\nMencoba lagi…');
+      setConn('off', 'Disconnected, retrying…');
+      if (retry >= 3) showOverlay("Can't connect to your PC. Make sure OwnRemote is running and your phone is on the same Wi-Fi.\nRetrying…");
       const delay = Math.min(10_000, 500 * 2 ** retry++);
       retryTimer = setTimeout(connect, delay);
     };
@@ -449,9 +449,9 @@
   const vCursor = $('vCursor');
   const screenMsg = $('screenMsg');
   const SCREEN_PRESETS = {
-    saver: { label: 'Hemat', fps: 2, width: 640, quality: 40 },
+    saver: { label: 'Saver', fps: 2, width: 640, quality: 40 },
     normal: { label: 'Normal', fps: 5, width: 960, quality: 50 },
-    sharp: { label: 'Jelas', fps: 8, width: 1280, quality: 60 },
+    sharp: { label: 'Sharp', fps: 8, width: 1280, quality: 60 },
   };
   const PRESET_CYCLE = ['saver', 'normal', 'sharp'];
   const SCREEN_WIDTHS = [640, 960, 1280, 1600, 1920];
@@ -510,7 +510,7 @@
     clearInterval(statTimer);
     predicted = null;
     if (on) {
-      showStageMsg('Memuat layar…');
+      showStageMsg('Loading screen…');
       vCursor.classList.add('hidden');
       subscribeScreen();
       statBytes = statFrames = 0;
@@ -567,7 +567,7 @@
       showStageMsg(msg.msg);
     } else if (msg.t === 'screen-off') {
       setScreen(false);
-      showOverlayToast(msg.reason === 'disabled' ? 'Preview layar dimatikan di pengaturan PC.' : 'Preview layar dihentikan.');
+      showOverlayToast(msg.reason === 'disabled' ? 'Screen preview is turned off on the PC.' : 'Screen preview stopped.');
     }
   }
 
@@ -597,7 +597,7 @@
     const kb = statBytes / 1024;
     $('screenStats').textContent = statFrames
       ? `${statFrames} fps · ${kb >= 100 ? Math.round(kb) : kb.toFixed(1)} KB/s`
-      : 'layar diam · 0 KB/s';
+      : 'screen idle · 0 KB/s';
     statBytes = statFrames = 0;
   }
 
@@ -655,7 +655,7 @@
 
   function showOverlayToast(text) {
     setConn(ws && ws.readyState === 1 ? 'on' : 'off', text);
-    setTimeout(() => { if (ws && ws.readyState === 1) setConn('on', 'Terhubung'); }, 3000);
+    setTimeout(() => { if (ws && ws.readyState === 1) setConn('on', 'Connected'); }, 3000);
   }
 
   // Perkiraan data maksimum (saat layar terus berubah). Layar diam = ~0 karena frame identik tidak dikirim.
@@ -675,7 +675,7 @@
     $('screenWidth').value = String(settings.screenWidth);
     $('screenQuality').value = settings.screenQuality;
     $('screenQualityOut').textContent = `${settings.screenQuality}%`;
-    $('screenEstimate').textContent = `Perkiraan maks. ±${estimateKBps()} KB/s saat layar terus berubah · layar diam ≈ 0`;
+    $('screenEstimate').textContent = `Up to ±${estimateKBps()} KB/s while the screen keeps changing · idle screen ≈ 0`;
     document.querySelectorAll('[data-screen-preset]').forEach((b) => b.classList.toggle('on', b.dataset.screenPreset === name));
   }
 
@@ -903,7 +903,7 @@
   }
 
   bindRange('sens', 'sensOut', 'sens', (v) => `${v.toFixed(1)}×`);
-  bindRange('accel', 'accelOut', 'accel', (v) => (v === 0 ? 'mati' : v.toFixed(1)));
+  bindRange('accel', 'accelOut', 'accel', (v) => (v === 0 ? 'off' : v.toFixed(1)));
   bindRange('scrollSpeed', 'scrollOut', 'scrollSpeed', (v) => `${v}`);
   bindToggle('natural', 'natural');
   bindToggle('haptic', 'haptic');
@@ -921,11 +921,11 @@
     autoReconnect = false;
     clearTimeout(retryTimer);
     if (ws) ws.close(1000, 'Diputus dari HP');
-    else stopWith('Terputus', 'Koneksi diputus.');
+    else stopWith('Disconnected', 'Connection closed.');
   });
 
   $('forgetBtn').addEventListener('click', async () => {
-    if (!confirm('Lupakan PC ini? Kamu harus memasukkan kode lagi untuk terhubung.')) return;
+    if (!confirm('Forget this PC? You will need the pairing code to connect again.')) return;
     closeSheet();
     autoReconnect = false;
     clearTimeout(retryTimer);

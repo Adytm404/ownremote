@@ -243,15 +243,15 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
     const now = Date.now();
     if (globalLockUntil > now) {
       const wait = Math.ceil((globalLockUntil - now) / 60_000);
-      return res.status(429).json({ error: `Pairing dikunci sementara karena terlalu banyak kode salah. Coba lagi dalam ${wait} menit.` });
+      return res.status(429).json({ error: `Pairing is paused after too many wrong codes. Try again in ${wait} min.` });
     }
     const f = failed.get(ip);
     if (f && f.until > now) {
       const wait = Math.ceil((f.until - now) / 1000);
-      return res.status(429).json({ error: `Terlalu banyak percobaan. Coba lagi dalam ${wait} detik.` });
+      return res.status(429).json({ error: `Too many attempts. Try again in ${wait} s.` });
     }
     if (!cfg.allowPairing) {
-      return res.status(403).json({ error: 'Pairing perangkat baru sedang dikunci di PC.' });
+      return res.status(403).json({ error: 'Pairing new devices is locked on the PC.' });
     }
     const code = String(req.body?.code ?? '').replace(/\D/g, '');
     if (!safeEqual(code, cfg.pairCode)) {
@@ -266,7 +266,7 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
         log(`Too many wrong codes from several addresses: pairing blocked for ${GLOBAL_LOCKOUT_MS / 60_000} minutes.`);
         tray.notify('Pairing blocked', 'Too many wrong pairing codes. Consider generating a new code.');
       }
-      return res.status(401).json({ error: 'Kode salah.' });
+      return res.status(401).json({ error: 'Wrong code.' });
     }
     failed.delete(ip);
 
@@ -293,17 +293,17 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
 
   app.get('/api/check', (req, res) => {
     const device = findDevice(bearer(req));
-    if (!device) return res.status(401).json({ error: 'Token tidak valid.' });
+    if (!device) return res.status(401).json({ error: 'Invalid token.' });
     res.json({ id: device.id, name: device.name, pc: os.hostname() });
   });
 
   // HP memilih "Lupakan PC ini": hapus perangkat dari daftar
   app.post('/api/unpair', (req, res) => {
     const device = findDevice(bearer(req));
-    if (!device) return res.status(401).json({ error: 'Token tidak valid.' });
+    if (!device) return res.status(401).json({ error: 'Invalid token.' });
     devices = devices.filter((d) => d.id !== device.id);
     persistDevices();
-    disconnect(device.id, CLOSE_REVOKED, 'Perangkat dilupakan');
+    disconnect(device.id, CLOSE_REVOKED, 'Device forgotten');
     log(`${device.name} unpaired itself from the phone.`);
     pushTray();
     res.json({ ok: true });
@@ -345,7 +345,7 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
   admin.post('/sessions/:id/disconnect', (req, res) => {
     const d = devices.find((x) => x.id === req.params.id);
     if (!d) return res.status(404).json({ error: 'Device not found.' });
-    const ok = disconnect(d.id, CLOSE_KICKED, 'Diputuskan dari PC');
+    const ok = disconnect(d.id, CLOSE_KICKED, 'Disconnected from the PC');
     if (ok) log(`${d.name} disconnected from the CLI.`);
     res.json({ ok });
   });
@@ -355,7 +355,7 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
     if (!d) return res.status(404).json({ error: 'Device not found.' });
     devices = devices.filter((x) => x.id !== d.id);
     persistDevices();
-    disconnect(d.id, CLOSE_REVOKED, 'Akses dicabut');
+    disconnect(d.id, CLOSE_REVOKED, 'Access revoked');
     log(`Access revoked for ${d.name}.`);
     pushTray();
     res.json({ ok: true });
@@ -363,7 +363,7 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
 
   admin.post('/sessions/revoke-all', (req, res) => {
     const count = devices.length;
-    for (const d of devices) disconnect(d.id, CLOSE_REVOKED, 'Akses dicabut');
+    for (const d of devices) disconnect(d.id, CLOSE_REVOKED, 'Access revoked');
     devices = [];
     persistDevices();
     log(`Access revoked for all devices (${count}).`);
@@ -417,14 +417,14 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
     if (url.pathname !== '/ws') return socket.destroy();
     wss.handleUpgrade(req, socket, head, (ws) => {
       const device = findDevice(url.searchParams.get('token'));
-      if (!device) return ws.close(CLOSE_REVOKED, 'Token tidak valid');
+      if (!device) return ws.close(CLOSE_REVOKED, 'Invalid token');
       onConnection(ws, device, req);
     });
   });
 
   function onConnection(ws, device, req) {
     const old = sockets.get(device.id);
-    if (old) old.close(CLOSE_REPLACED, 'Terhubung dari tab/perangkat lain');
+    if (old) old.close(CLOSE_REPLACED, 'Connected from another tab or device');
 
     const ip = clientIp(req);
     ws.connectedAt = new Date().toISOString();
@@ -542,7 +542,7 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
     if (stopping) return stopping;
     stopping = new Promise((resolve) => {
       clearInterval(heartbeat);
-      for (const ws of sockets.values()) ws.close(1001, 'Server dimatikan');
+      for (const ws of sockets.values()) ws.close(1001, 'Server stopped');
       if (devicesDirty) persistDevices();
       input.stop();
       screen.stop();
