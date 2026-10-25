@@ -238,6 +238,21 @@ function createServer({ mode = 'foreground', log = () => {}, onShutdown = () => 
   app.use(express.json({ limit: '8kb' }));
   app.use(express.static(path.join(config.ROOT, 'public'), { index: 'index.html' }));
 
+  // Dashboard di HP bisa menyimpan beberapa PC: halaman dari PC A memanggil API PC B.
+  // Aman dibuka lintas origin karena tidak memakai cookie; semua akses butuh kode pairing atau token.
+  app.use('/api', (req, res, next) => {
+    res.set({
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-allow-headers': 'content-type, authorization',
+      'access-control-max-age': '600',
+    });
+    if (req.method !== 'OPTIONS') return next();
+    // Chrome Private Network Access: halaman tunnel (publik) -> PC di Wi-Fi (privat)
+    if (req.get('access-control-request-private-network')) res.set('access-control-allow-private-network', 'true');
+    res.sendStatus(204);
+  });
+
   app.post('/api/pair', (req, res) => {
     const ip = clientIp(req);
     const now = Date.now();

@@ -316,3 +316,72 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   .kb { width: 100%; }
   .kb-open .touchpad { flex-basis: 100%; height: auto; min-height: 60px; }
 }
+
+/* ---------------- dashboard (daftar PC) ---------------- */
+.home {
+  overflow-y: auto;
+  padding: calc(16px + var(--safe-t)) 16px calc(24px + var(--safe-b));
+  background:
+    radial-gradient(600px 400px at 50% -10%, rgba(198, 244, 91, .10), transparent 70%),
+    var(--bg);
+}
+.home-wrap { width: 100%; max-width: 480px; margin: 0 auto; }
+.home-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+.home-head .brand { margin: 0; }
+.home h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -.01em; }
+.home h1 + p { margin: 0 0 20px; line-height: 1.5; }
+
+.session-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 10px; }
+.pc-card {
+  display: flex; align-items: stretch;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden;
+}
+.pc-card.new { border-style: dashed; }
+.pc-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 14px; background: none; text-align: left;
+}
+.pc-main:active { background: var(--surface-2); }
+.pc-ico { width: 42px; height: 42px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; flex: none; }
+.pc-ico svg { width: 22px; height: 22px; fill: var(--accent); }
+.pc-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pc-text strong, .pc-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-text strong { font-size: 16px; }
+.pc-text small { color: var(--muted); font-size: 12px; }
+.pc-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); flex: none; max-width: 40%; text-align: right; }
+.pc-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.pc-status.online { color: var(--ok); }
+.pc-status.online i { background: var(--ok); box-shadow: 0 0 0 3px rgba(74, 222, 128, .15); }
+.pc-status.offline i { background: var(--danger); }
+.pc-status.unpaired, .pc-status.blocked { color: var(--warn); }
+.pc-status.unpaired i, .pc-status.blocked i { background: var(--warn); }
+.pc-status.pair { color: var(--accent); }
+.pc-status.pair i { background: var(--accent); }
+.pc-status.checking i { animation: blink 1s infinite alternate; }
+@keyframes blink { to { opacity: .25; } }
+.pc-more { width: 44px; flex: none; background: none; border-left: 1px solid var(--line); display: grid; place-items: center; }
+.pc-more svg { width: 20px; height: 20px; fill: var(--muted); }
+.pc-more:active { background: var(--surface-2); }
+
+.add-pc {
+  width: 100%; height: 54px; border-radius: 14px;
+  background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.add-pc span { font-size: 22px; line-height: 1; }
+.add-pc:active { transform: scale(.98); }
+.home-tip { margin: 14px 0 0; line-height: 1.5; text-align: center; }
+.home .sheet { position: fixed; }
+.home .sheet .text-input { margin-bottom: 0; }
+
+/* tombol kembali (pairing & trackpad) */
+.pair-top { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
+.pair-top .brand { margin: 0; }
+.back-btn { width: 36px; height: 36px; border-radius: 10px; background: var(--surface); display: grid; place-items: center; flex: none; }
+.back-btn svg { width: 22px; height: 22px; fill: var(--muted); }
+.back-btn:active { background: var(--surface-2); }
+.field-label { display: block; font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+.addr-field { display: block; }
+.overlay-home { width: 100%; margin-top: 10px; }

@@ -12,17 +12,69 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- ============ Layar pairing ============ -->
+  <!-- ============ Dashboard: daftar PC yang tersimpan ============ -->
+  <main id="homeScreen" class="screen home hidden">
+    <div class="home-wrap">
+      <header class="home-head">
+        <div class="brand">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/></svg>
+          <span>OwnRemote</span>
+        </div>
+        <button id="refreshBtn" class="icon-btn" aria-label="Refresh status">
+          <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg>
+        </button>
+      </header>
+      <h1>Your PCs</h1>
+      <p class="muted" id="homeSub">Pick a PC to control.</p>
+
+      <ul id="sessionList" class="session-list"></ul>
+
+      <button id="addPcBtn" class="add-pc">
+        <span>+</span> Add a PC
+      </button>
+      <p class="muted small home-tip">Each PC runs OwnRemote and shows its own address and pairing code in the CLI.</p>
+    </div>
+
+    <!-- aksi untuk satu PC -->
+    <div id="pcSheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-backdrop" data-close></div>
+      <div class="sheet-panel" role="dialog" aria-labelledby="pcSheetTitle">
+        <div class="sheet-grip"></div>
+        <h2 id="pcSheetTitle">PC</h2>
+        <p class="muted small" id="pcSheetUrl"></p>
+        <label class="setting">
+          <span>Name on this phone</span>
+          <input id="pcLabel" class="text-input" maxlength="40" placeholder="e.g. Office laptop">
+        </label>
+        <div class="sheet-actions">
+          <button id="pcConnectBtn" class="ghost">Connect</button>
+          <button id="pcRepairBtn" class="ghost">Pair again</button>
+          <button id="pcRemoveBtn" class="danger">Remove this PC</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ Layar pairing (tambah PC) ============ -->
   <main id="pairScreen" class="screen pair hidden">
     <div class="pair-card">
-      <div class="brand">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/></svg>
-        <span>OwnRemote</span>
+      <div class="pair-top">
+        <button id="pairBackBtn" class="back-btn hidden" type="button" aria-label="Back to your PCs">
+          <svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+        </button>
+        <div class="brand">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/></svg>
+          <span>OwnRemote</span>
+        </div>
       </div>
-      <h1>Connect to your PC</h1>
-      <p class="muted">Enter the 6-digit code shown on your PC.</p>
+      <h1 id="pairTitle">Connect to your PC</h1>
+      <p class="muted" id="pairSub">Enter the 6-digit code shown on your PC.</p>
 
       <form id="pairForm" autocomplete="off">
+        <label id="addrField" class="addr-field hidden">
+          <span class="field-label">PC address</span>
+          <input id="addrInput" class="text-input" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.20:8787 or https://….trycloudflare.com">
+        </label>
         <label class="code-field" for="codeInput">
           <input id="codeInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="Pairing code">
           <span class="code-slots" aria-hidden="true">
@@ -40,6 +92,9 @@
   <main id="padScreen" class="screen pad-screen hidden">
     <header class="topbar">
       <div class="conn">
+        <button id="homeBtn" class="back-btn" aria-label="Your PCs">
+          <svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+        </button>
         <i id="connDot" class="dot"></i>
         <div>
           <strong id="pcName">PC</strong>
@@ -146,6 +201,7 @@
       <div class="overlay-card">
         <p id="overlayText">Disconnected</p>
         <button id="reconnectBtn" class="primary">Reconnect</button>
+        <button id="overlayHomeBtn" class="ghost overlay-home">Your PCs</button>
       </div>
     </div>
 
@@ -198,7 +254,7 @@
 
         <div class="sheet-actions">
           <button id="fullscreenBtn" class="ghost">Full screen</button>
-          <button id="disconnectBtn" class="ghost">Disconnect</button>
+          <button id="disconnectBtn" class="ghost">Switch PC</button>
           <button id="forgetBtn" class="danger">Forget this PC</button>
         </div>
         <p class="muted small" id="deviceInfo"></p>

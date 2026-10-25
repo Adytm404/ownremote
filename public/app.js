@@ -7,9 +7,17 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch { /* mode privat */ } },
     del(k) { try { localStorage.removeItem(k); } catch { /* mode privat */ } },
   };
+  // per tab: reload saat sedang mengontrol PC kembali ke PC yang sama
+  const tabStore = {
+    get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { sessionStorage.setItem(k, v); } catch { /* mode privat */ } },
+    del(k) { try { sessionStorage.removeItem(k); } catch { /* mode privat */ } },
+  };
 
-  const TOKEN_KEY = 'rc_token';
-  const PC_KEY = 'rc_pc';
+  const SESSIONS_KEY = 'or_sessions';
+  const CURRENT_KEY = 'or_current';
+  const LEGACY_TOKEN_KEY = 'rc_token';
+  const LEGACY_PC_KEY = 'rc_pc';
   const SETTINGS_KEY = 'rc_settings';
   const DEFAULTS = { sens: 1.6, accel: 0.8, scrollSpeed: 4, natural: true, haptic: true, screenFps: 5, screenWidth: 960, screenQuality: 50, screenZoom: 1 };
 
@@ -22,31 +30,108 @@
   let settings = { ...DEFAULTS };
   try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* default */ }
 
-  let token = store.get(TOKEN_KEY);
   let ws = null;
   let retry = 0;
   let retryTimer = 0;
   let autoReconnect = true;
   let pongTimer = 0;
 
+  // ================================================================ daftar PC (sesi)
+  // Satu HP bisa menyimpan beberapa PC. Tiap PC = { id, url (origin), token, pc (hostname), label }.
+  // Halaman ini boleh dibuka dari PC mana pun; API & WebSocket PC lain dipanggil lintas origin.
+  const HERE = location.origin;
+  const DEFAULT_PORT = '8787';
+
+  const newId = () => Math.random().toString(36).slice(2, 10);
+  const hostOf = (url) => { try { return new URL(url).host; } catch { return url; } };
+  const titleOf = (s) => s.label || s.pc || hostOf(s.url);
+  // Halaman HTTPS (tunnel) tidak boleh memanggil alamat http:// (Wi-Fi) - diblokir browser
+  const blockedByHttps = (url) => location.protocol === 'https:' && url.startsWith('http:');
+
+  let sessions = loadSessions();
+  let active = null; // PC yang sedang dikontrol
+  let pairTarget = null; // { url, fixed, session } saat menambah / pairing ulang PC
+
+  function loadSessions() {
+    let list = [];
+    try { list = JSON.parse(store.get(SESSIONS_KEY) || '[]'); } catch { /* rusak: mulai kosong */ }
+    if (!Array.isArray(list)) list = [];
+    list = list.filter((s) => s && typeof s.url === 'string' && typeof s.token === 'string');
+    // Versi lama hanya menyimpan satu PC (PC yang membuka halaman ini)
+    const legacy = store.get(LEGACY_TOKEN_KEY);
+    if (legacy) {
+      if (!list.some((s) => s.url === HERE)) {
+        list.unshift({ id: newId(), url: HERE, token: legacy, pc: store.get(LEGACY_PC_KEY) || '', label: '', used: Date.now() });
+      }
+      store.set(SESSIONS_KEY, JSON.stringify(list));
+      store.del(LEGACY_TOKEN_KEY);
+      store.del(LEGACY_PC_KEY);
+    }
+    return list;
+  }
+
+  const saveSessions = () => store.set(SESSIONS_KEY, JSON.stringify(sessions));
+  const findSession = (id) => sessions.find((s) => s.id === id) || null;
+
+  // "192.168.1.20" -> http://192.168.1.20:8787, "abc.trycloudflare.com" -> https://abc.trycloudflare.com
+  function normalizeUrl(raw) {
+    let text = String(raw || '').trim().replace(/\/+$/, '');
+    if (!text) throw new Error('Enter the address shown on your PC.');
+    const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(text);
+    let local = false;
+    if (!hasScheme) {
+      const host = text.split(/[/:]/)[0];
+      local = /^(localhost|\d{1,3}(\.\d{1,3}){3})$/i.test(host) || /\.(local|lan|home)$/i.test(host) || !host.includes('.');
+      text = `${local ? 'http' : 'https'}://${text}`;
+    }
+    let u;
+    try { u = new URL(text); } catch { throw new Error("That doesn't look like an address."); }
+    if (!/^https?:$/.test(u.protocol) || !u.hostname) throw new Error("That doesn't look like an address.");
+    if (local && !u.port) u.port = DEFAULT_PORT;
+    return u.origin;
+  }
+
   // ================================================================ layar
+  const homeScreen = $('homeScreen');
   const pairScreen = $('pairScreen');
   const padScreen = $('padScreen');
   const overlay = $('overlay');
 
-  function showPair(message = '') {
-    padScreen.classList.add('hidden');
-    pairScreen.classList.remove('hidden');
+  function showOnly(el) {
+    [homeScreen, pairScreen, padScreen].forEach((s) => s.classList.toggle('hidden', s !== el));
+  }
+
+  // Pairing PC baru (url kosong = isi alamat sendiri) atau pairing ulang PC yang sudah ada
+  function showPair({ url = '', session = null, message = '' } = {}) {
+    const target = session ? session.url : url;
+    pairTarget = { url: target, fixed: Boolean(target), session };
+    showOnly(pairScreen);
+    const isHere = target === HERE;
+    $('pairTitle').textContent = session ? `Pair ${titleOf(session)} again` : target ? 'Connect to your PC' : 'Add a PC';
+    $('pairSub').textContent = target && !isHere
+      ? `Enter the 6-digit code shown on ${hostOf(target)}.`
+      : target ? 'Enter the 6-digit code shown on your PC.'
+        : 'Enter the address and 6-digit code shown in OwnRemote on that PC.';
+    $('addrField').classList.toggle('hidden', Boolean(target));
+    $('pairBackBtn').classList.toggle('hidden', !sessions.length && isHere);
     $('pairError').textContent = message;
+    $('addrInput').value = '';
     codeInput.value = '';
     renderSlots();
+    if (!target) setTimeout(() => $('addrInput').focus(), 50);
   }
 
   function showPad() {
-    pairScreen.classList.add('hidden');
-    padScreen.classList.remove('hidden');
+    showOnly(padScreen);
     hideOverlay();
-    $('pcName').textContent = store.get(PC_KEY) || 'PC';
+    $('pcName').textContent = active ? titleOf(active) : 'PC';
+  }
+
+  function showHome() {
+    showOnly(homeScreen);
+    closePcSheet();
+    renderHome();
+    refreshStatuses();
   }
 
   function setConn(state, text) {
@@ -61,6 +146,158 @@
   }
 
   const hideOverlay = () => overlay.classList.add('hidden');
+
+  // ================================================================ dashboard
+  const MONITOR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3H3a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7v2H8v2h8v-2h-2v-2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 13H3V5h18z"/></svg>';
+  const STATUS_TEXT = {
+    checking: 'Checking…',
+    online: 'Online',
+    offline: 'Offline',
+    unpaired: 'Needs pairing again',
+    blocked: 'Open the Wi-Fi address to reach it',
+  };
+  const status = new Map(); // id -> status
+  const sessionList = $('sessionList');
+
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  function renderHome() {
+    const list = [...sessions].sort((a, b) => (b.used || 0) - (a.used || 0));
+    const rows = list.map((s) => {
+      const st = status.get(s.id) || 'checking';
+      return `<li class="pc-card">
+        <button class="pc-main" data-connect="${s.id}">
+          <span class="pc-ico">${MONITOR_SVG}</span>
+          <span class="pc-text">
+            <strong>${escapeHtml(titleOf(s))}</strong>
+            <small>${escapeHtml(hostOf(s.url))}${s.url === HERE ? ' · this page' : ''}</small>
+          </span>
+          <span class="pc-status ${st}"><i></i>${STATUS_TEXT[st]}</span>
+        </button>
+        <button class="pc-more" data-more="${s.id}" aria-label="Options for ${escapeHtml(titleOf(s))}">
+          <svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+        </button>
+      </li>`;
+    });
+    // PC yang menyajikan halaman ini belum dipasangkan: tawarkan langsung
+    if (!sessions.some((s) => s.url === HERE)) {
+      rows.unshift(`<li class="pc-card new">
+        <button class="pc-main" data-pair-here>
+          <span class="pc-ico">${MONITOR_SVG}</span>
+          <span class="pc-text"><strong>This PC</strong><small>${escapeHtml(location.host)} · this page</small></span>
+          <span class="pc-status pair"><i></i>Tap to pair</span>
+        </button>
+      </li>`);
+    }
+    sessionList.innerHTML = rows.join('');
+    const n = sessions.length;
+    $('homeSub').textContent = n ? `${n} PC${n > 1 ? 's' : ''} saved on this phone. Pick one to control.` : 'No PCs yet. Pair this PC or add another one.';
+  }
+
+  async function checkSession(s) {
+    if (blockedByHttps(s.url)) return 'blocked';
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    try {
+      const res = await fetch(`${s.url}/api/check`, { headers: { authorization: `Bearer ${s.token}` }, signal: ctrl.signal, cache: 'no-store' });
+      if (res.status === 401) return 'unpaired';
+      if (!res.ok) return 'offline';
+      const data = await res.json().catch(() => ({}));
+      if (data.pc && data.pc !== s.pc) { s.pc = data.pc; saveSessions(); }
+      return 'online';
+    } catch {
+      return 'offline';
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  let refreshing = 0;
+  function refreshStatuses() {
+    const run = ++refreshing;
+    sessions.forEach((s) => status.set(s.id, 'checking'));
+    renderHome();
+    sessions.forEach(async (s) => {
+      const st = await checkSession(s);
+      if (run !== refreshing || homeScreen.classList.contains('hidden')) return;
+      status.set(s.id, st);
+      renderHome();
+    });
+  }
+
+  sessionList.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.hasAttribute('data-pair-here')) return showPair({ url: HERE });
+    const s = findSession(btn.dataset.connect || btn.dataset.more);
+    if (!s) return;
+    if (btn.dataset.more) return openPcSheet(s);
+    if (status.get(s.id) === 'unpaired') return showPair({ session: s });
+    openSession(s);
+  });
+
+  $('addPcBtn').addEventListener('click', () => showPair());
+  $('refreshBtn').addEventListener('click', refreshStatuses);
+  $('pairBackBtn').addEventListener('click', showHome);
+
+  // ---- aksi satu PC (ganti nama, pairing ulang, hapus)
+  const pcSheet = $('pcSheet');
+  let sheetSession = null;
+
+  function openPcSheet(s) {
+    sheetSession = s;
+    $('pcSheetTitle').textContent = titleOf(s);
+    $('pcSheetUrl').textContent = `${s.url}${s.pc ? ` · ${s.pc}` : ''}`;
+    $('pcLabel').value = s.label || '';
+    $('pcLabel').placeholder = s.pc || 'e.g. Office laptop';
+    pcSheet.classList.remove('hidden');
+    pcSheet.setAttribute('aria-hidden', 'false');
+  }
+
+  function closePcSheet() {
+    if (sheetSession) {
+      const label = $('pcLabel').value.trim().slice(0, 40);
+      if (label !== (sheetSession.label || '')) {
+        sheetSession.label = label;
+        saveSessions();
+        renderHome();
+      }
+    }
+    sheetSession = null;
+    pcSheet.classList.add('hidden');
+    pcSheet.setAttribute('aria-hidden', 'true');
+  }
+
+  pcSheet.querySelector('[data-close]').addEventListener('click', closePcSheet);
+  $('pcLabel').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); closePcSheet(); } });
+  $('pcConnectBtn').addEventListener('click', () => {
+    const s = sheetSession;
+    closePcSheet();
+    if (s) openSession(s);
+  });
+  $('pcRepairBtn').addEventListener('click', () => {
+    const s = sheetSession;
+    closePcSheet();
+    if (s) showPair({ session: s });
+  });
+  $('pcRemoveBtn').addEventListener('click', () => {
+    const s = sheetSession;
+    if (!s || !confirm(`Remove ${titleOf(s)} from this phone? You will need its pairing code to connect again.`)) return;
+    closePcSheet();
+    removeSession(s);
+    renderHome();
+  });
+
+  // Hapus dari HP dan (bila terjangkau) dari daftar perangkat di PC tersebut
+  function removeSession(s) {
+    sessions = sessions.filter((x) => x.id !== s.id);
+    status.delete(s.id);
+    saveSessions();
+    if (!blockedByHttps(s.url)) {
+      fetch(`${s.url}/api/unpair`, { method: 'POST', headers: { authorization: `Bearer ${s.token}` } })
+        .catch(() => { /* PC tidak terjangkau, cukup hapus lokal */ });
+    }
+  }
 
   // ================================================================ pairing
   const codeInput = $('codeInput');
@@ -85,6 +322,10 @@
   });
   codeInput.addEventListener('focus', renderSlots);
   codeInput.addEventListener('blur', renderSlots);
+  $('addrInput').addEventListener('input', () => { $('pairError').textContent = ''; });
+  $('addrInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); codeInput.focus(); }
+  });
 
   $('pairForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -92,32 +333,52 @@
   });
 
   async function pair() {
-    if (pairing) return;
+    if (pairing || !pairTarget) return;
+    let url = pairTarget.url;
+    if (!pairTarget.fixed) {
+      try {
+        url = normalizeUrl($('addrInput').value);
+      } catch (err) {
+        $('pairError').textContent = err.message;
+        return;
+      }
+    }
     const code = codeInput.value;
     if (code.length !== 6) {
       fail('The code has 6 digits.');
+      return;
+    }
+    if (blockedByHttps(url)) {
+      fail(`This page is open over HTTPS, so your browser blocks the Wi-Fi address ${hostOf(url)}. Open OwnRemote from a Wi-Fi address (http://…) instead, or use that PC's tunnel address.`);
       return;
     }
     pairing = true;
     $('pairBtn').disabled = true;
     $('pairBtn').textContent = 'Connecting…';
     try {
-      const res = await fetch('/api/pair', {
+      const res = await fetch(`${url}/api/pair`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ code, name: $('nameInput').value.trim() }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Gagal terhubung.');
-      token = data.token;
-      store.set(TOKEN_KEY, token);
-      store.set(PC_KEY, data.pc);
+      if (!res.ok) throw new Error(data.error || 'Could not connect.');
+      // PC yang sama (alamat sama) cukup diperbarui, bukan diduplikasi
+      let s = pairTarget.session || sessions.find((x) => x.url === url);
+      if (!s) {
+        s = { id: newId(), url, label: '' };
+        sessions.push(s);
+      }
+      Object.assign(s, { token: data.token, pc: data.pc || s.pc || '' });
+      saveSessions();
+      status.set(s.id, 'online');
       codeInput.blur();
-      showPad();
-      retry = 0;
-      connect();
+      openSession(s);
     } catch (err) {
-      fail(err instanceof TypeError ? "Can't reach your PC. Make sure your phone is on the same Wi-Fi." : err.message);
+      fail(err instanceof TypeError
+        ? (url === HERE ? "Can't reach your PC. Make sure your phone is on the same Wi-Fi."
+          : `Can't reach ${hostOf(url)}. Check the address, make sure OwnRemote is running there and your phone is on the same Wi-Fi.`)
+        : err.message);
     } finally {
       pairing = false;
       $('pairBtn').disabled = false;
@@ -135,16 +396,51 @@
     }
   }
 
+  // ================================================================ pilih / tinggalkan PC
+  function openSession(s) {
+    leaveSession({ quiet: true });
+    active = s;
+    s.used = Date.now();
+    saveSessions();
+    tabStore.set(CURRENT_KEY, s.id);
+    applyNetworkDefaults(s.url);
+    $('deviceInfo').textContent = '';
+    setConn('', 'Connecting…');
+    showPad();
+    retry = 0;
+    connect();
+  }
+
+  // Putus dari PC aktif. quiet = langsung pindah ke PC lain tanpa membuka dashboard.
+  function leaveSession({ quiet = false } = {}) {
+    autoReconnect = false;
+    clearTimeout(retryTimer);
+    clearTimeout(pongTimer);
+    if (screenOn) setScreen(false);
+    const sock = ws;
+    ws = null;
+    if (sock) sock.close(1000, 'Switched PC');
+    resetInputState();
+    active = null;
+    tabStore.del(CURRENT_KEY);
+    hideOverlay();
+    closeSheet();
+    if (!quiet) showHome();
+  }
+
+  $('homeBtn').addEventListener('click', () => leaveSession());
+  $('overlayHomeBtn').addEventListener('click', () => leaveSession());
+
   // ================================================================ koneksi
   function connect() {
     clearTimeout(retryTimer);
-    if (!token) return showPair();
+    if (!active) return showHome();
     if (ws && ws.readyState <= 1) return;
     autoReconnect = true;
     setConn('', 'Connecting…');
 
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const sock = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`);
+    const target = active;
+    const sock = new WebSocket(`${target.url.replace(/^http/, 'ws')}/ws?token=${encodeURIComponent(target.token)}`);
     ws = sock;
     sock.binaryType = 'arraybuffer'; // frame layar dikirim sebagai JPEG biner
 
@@ -163,8 +459,8 @@
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
       if (msg.t === 'hello') {
-        $('pcName').textContent = msg.pc;
-        store.set(PC_KEY, msg.pc);
+        if (target.pc !== msg.pc) { target.pc = msg.pc; saveSessions(); }
+        $('pcName').textContent = titleOf(target);
         $('deviceInfo').textContent = `This device is paired as "${msg.name}".`;
       } else if (msg.t === 'pong') {
         clearTimeout(pongTimer);
@@ -180,8 +476,10 @@
       resetInputState();
 
       if (e.code === 4001) {
-        forgetLocal();
-        showPair('This device was removed on the PC. Enter the code again.');
+        active = null;
+        tabStore.del(CURRENT_KEY);
+        status.set(target.id, 'unpaired');
+        showPair({ session: target, message: 'This phone was removed on that PC. Enter its code again.' });
         return;
       }
       if (e.code === 4003) return stopWith('Disconnected', 'Disconnected from the PC.');
@@ -189,25 +487,20 @@
       if (!autoReconnect) return stopWith('Disconnected', 'Connection closed.');
 
       setConn('off', 'Disconnected, retrying…');
-      if (retry >= 3) showOverlay("Can't connect to your PC. Make sure OwnRemote is running and your phone is on the same Wi-Fi.\nRetrying…");
+      if (retry >= 3) showOverlay(`Can't connect to ${titleOf(target)}. Make sure OwnRemote is running and your phone is on the same Wi-Fi.\nRetrying…`);
       const delay = Math.min(10_000, 500 * 2 ** retry++);
       retryTimer = setTimeout(connect, delay);
     };
   }
 
-  function stopWith(status, message) {
+  function stopWith(label, message) {
     autoReconnect = false;
-    setConn('off', status);
+    setConn('off', label);
     showOverlay(message);
   }
 
   function send(obj) {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
-  }
-
-  function forgetLocal() {
-    token = null;
-    store.del(TOKEN_KEY);
   }
 
   $('reconnectBtn').addEventListener('click', () => {
@@ -223,7 +516,7 @@
       if (screenOn) send({ t: 'screen', on: false });
       return;
     }
-    if (!token || padScreen.classList.contains('hidden')) return;
+    if (!active || padScreen.classList.contains('hidden')) return;
     if (ws && ws.readyState === 1) {
       send({ t: 'ping' });
       clearTimeout(pongTimer);
@@ -480,10 +773,15 @@
   }
   delete settings.screenPreset;
   // Dibuka lewat internet (Cloudflare Tunnel) dan belum pernah diatur: mulai dari preset Hemat supaya hemat kuota
-  const viaInternet = !/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.)/.test(location.hostname);
-  let screenStored = false;
-  try { screenStored = 'screenFps' in JSON.parse(store.get(SETTINGS_KEY) || '{}'); } catch { /* default */ }
-  if (viaInternet && !screenStored) Object.assign(settings, { screenFps: 2, screenWidth: 640, screenQuality: 40 });
+  const isInternet = (url) => !/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.)/.test(new URL(url).hostname);
+  function applyNetworkDefaults(url) {
+    let stored = false;
+    try { stored = 'screenFps' in JSON.parse(store.get(SETTINGS_KEY) || '{}'); } catch { /* default */ }
+    if (stored) return;
+    const p = isInternet(url) ? SCREEN_PRESETS.saver : SCREEN_PRESETS.normal;
+    Object.assign(settings, { screenFps: p.fps, screenWidth: p.width, screenQuality: p.quality });
+    renderScreenSettings();
+  }
   if (!ZOOMS.includes(settings.screenZoom)) settings.screenZoom = 1;
 
   function presetName() {
@@ -916,42 +1214,31 @@
     else document.documentElement.requestFullscreen().catch(() => {});
   });
 
-  $('disconnectBtn').addEventListener('click', () => {
-    closeSheet();
-    autoReconnect = false;
-    clearTimeout(retryTimer);
-    if (ws) ws.close(1000, 'Diputus dari HP');
-    else stopWith('Disconnected', 'Connection closed.');
-  });
+  $('disconnectBtn').addEventListener('click', () => leaveSession());
 
-  $('forgetBtn').addEventListener('click', async () => {
-    if (!confirm('Forget this PC? You will need the pairing code to connect again.')) return;
-    closeSheet();
-    autoReconnect = false;
-    clearTimeout(retryTimer);
-    const old = token;
-    forgetLocal();
-    try {
-      await fetch('/api/unpair', { method: 'POST', headers: { authorization: `Bearer ${old}` } });
-    } catch { /* PC tidak terjangkau, cukup hapus lokal */ }
-    if (ws) ws.close(1000);
-    hideOverlay();
-    showPair();
+  $('forgetBtn').addEventListener('click', () => {
+    const s = active;
+    if (!s || !confirm(`Forget ${titleOf(s)}? You will need its pairing code to connect again.`)) return;
+    removeSession(s); // unpair dulu selagi koneksi masih hidup
+    leaveSession();
   });
 
   // ================================================================ mulai
   const hashCode = (location.hash.match(/code=(\d{6})/) || [])[1];
   if (location.hash) history.replaceState(null, '', location.pathname);
 
-  if (token) {
-    showPad();
-    connect();
+  const resume = findSession(tabStore.get(CURRENT_KEY));
+  if (hashCode) {
+    // QR dari CLI membawa kode pairing PC ini
+    showPair({ url: HERE });
+    codeInput.value = hashCode;
+    renderSlots();
+    pair();
+  } else if (resume) {
+    openSession(resume);
+  } else if (!sessions.length) {
+    showPair({ url: HERE });
   } else {
-    showPair();
-    if (hashCode) {
-      codeInput.value = hashCode;
-      renderSlots();
-      pair();
-    }
+    showHome();
   }
 })();

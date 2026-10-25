@@ -31,6 +31,7 @@ Then just type **`ownremote`** in Command Prompt, PowerShell or Windows Terminal
 | 🖱️ **Trackpad** | Move, tap to click, two-finger tap for right click, two-finger scroll, hold-and-drag, physical-style Left / Middle / Right buttons. |
 | ⌨️ **Live keyboard** | Everything you type appears on the PC letter by letter, including emoji, accents, autocorrect and swipe typing. Sticky Ctrl / Alt / Shift / Win, arrows, Esc, Tab, F-keys, shortcuts (Ctrl+C/V/X/Z/A/S, Alt+Tab, Win+D) and media keys. |
 | 🖥️ **Screen preview** | Off by default. Turn it on to see your PC screen with a **virtual cursor** that sits exactly where the real one is (measured error ≈ 0.05 px), zoom 1× / 2× / 3× that follows the cursor, 1–15 fps, adjustable resolution and quality, and identical frames skipped so a still screen costs ≈ 0 KB/s. |
+| 🗂️ **Several PCs** | The phone keeps a dashboard of every PC you paired, shows which ones are online, and lets you switch between them with one tap. |
 | 🧑‍💻 **CLI dashboard** | Numbered menus to run in the terminal or in the background, manage paired devices, change settings and set up the tunnel. |
 | 🪟 **Windows integration** | Background mode with a tray icon, start with Windows (with an optional delay), Windows Firewall helper. |
 | 🌍 **Cloudflare Tunnel** | Quick tunnel (random `*.trycloudflare.com` URL, no account) or a named tunnel on your own domain. |
@@ -101,6 +102,16 @@ If the phone cannot open the page, use **Settings → Allow port in Windows Fire
 
 ## Using it
 
+### Your PCs (dashboard)
+
+The first time you open the page it pairs with the PC that served it. After that, the phone opens a **Your PCs** dashboard:
+
+- Each saved PC shows **Online**, **Offline** or **Needs pairing again** (when it was removed on that PC). Tap one to control it, and use the **‹** button on the trackpad (or ⚙ → **Switch PC**) to go back.
+- **Add a PC** asks for that PC's address and pairing code, both shown in its OwnRemote CLI. `192.168.1.20` becomes `http://192.168.1.20:8787`; a tunnel address such as `calm-river.trycloudflare.com` uses HTTPS.
+- The **⋮** button renames a PC on this phone, pairs it again or removes it (which also unpairs the phone on that PC).
+
+Every PC needs OwnRemote running. The list is stored in the phone's browser, so one bookmarked page can reach all your PCs. A page opened over HTTPS (tunnel) cannot reach plain `http://` Wi-Fi addresses because browsers block it; open the dashboard from a Wi-Fi address to mix both.
+
 ### Trackpad
 
 | Gesture | Action |
@@ -170,6 +181,7 @@ OwnRemote starts and supervises `cloudflared` itself (restarting it with back-of
 - New devices need the 6-digit pairing code. After 5 wrong codes an IP is blocked for 60 s; after 20 wrong codes from any addresses within 10 minutes, pairing is blocked for 10 minutes (a new code lifts it).
 - Each phone gets its own random token; only a SHA-256 hash is stored. Revoke devices any time from *Session management*.
 - The admin API used by the CLI only answers on `127.0.0.1`, requires a secret token, and **rejects anything that arrives through Cloudflare or another proxy**.
+- The phone API (`/api/pair`, `/api/check`, `/api/unpair`) allows cross-origin requests so one dashboard can talk to several PCs. It uses no cookies, so another website gains nothing: it would still need the pairing code (with the limits above) or a device token.
 - Behind the tunnel, the real client IP comes from `CF-Connecting-IP` (trusted only for connections from localhost).
 - On your LAN the connection is plain HTTP, so use it on networks you trust, or use the tunnel (HTTPS). When the PC is reachable from the internet, enable **Auto-lock pairing**.
 - The screen preview is off until the phone turns it on, the tray shows a notification when it starts, the CLI marks the device with `◉ screen`, and you can disable the feature entirely.
