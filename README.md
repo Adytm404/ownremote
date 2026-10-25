@@ -7,6 +7,15 @@ over your Wi-Fi or from anywhere through Cloudflare Tunnel. No app to install on
 
 [![npm](https://img.shields.io/npm/v/ownremote?color=c6f45b&labelColor=0d0f14)](https://www.npmjs.com/package/ownremote) ![platform](https://img.shields.io/badge/platform-Windows-0d0f14?labelColor=0d0f14) [![license](https://img.shields.io/badge/license-MIT-0d0f14?labelColor=0d0f14)](https://github.com/Adytm404/ownremote/blob/main/LICENSE)
 
+### 🚀 Install in one line
+
+```bash
+npm i -g ownremote
+```
+
+Then just type **`ownremote`** in Command Prompt, PowerShell or Windows Terminal.<br>
+<sub>Requires Windows 10/11 and Node.js 18+</sub>
+
 <a href="https://github.com/Adytm404/ownremote/blob/main/docs/ownremote-trailer.mp4"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/trailer-preview.gif" alt="OwnRemote trailer" width="820"></a>
 
 [▶ Watch the full trailer (48 s, MP4)](https://github.com/Adytm404/ownremote/blob/main/docs/ownremote-trailer.mp4)
@@ -62,13 +71,13 @@ over your Wi-Fi or from anywhere through Cloudflare Tunnel. No app to install on
 
 ## Quick start
 
-```bat
-npm install -g ownremote
+```bash
+npm i -g ownremote
 ownremote
 ```
 
 That's it: `ownremote` opens the dashboard from any Command Prompt, PowerShell or Windows Terminal window.
-Update later with `npm install -g ownremote@latest`.
+Update later with `npm i -g ownremote@latest`.
 
 <details>
 <summary>Run from source instead</summary>
