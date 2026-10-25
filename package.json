@@ -28,6 +28,11 @@
   "bin": {
     "ownremote": "cli.js"
   },
+  "files": [
+    "cli.js",
+    "src/",
+    "public/"
+  ],
   "scripts": {
     "start": "node cli.js",
     "daemon": "node src/daemon.js"
@@ -38,7 +43,6 @@
   "os": [
     "win32"
   ],
-  "private": true,
   "dependencies": {
     "express": "^5.3.0",
     "qrcode-terminal": "^0.12.0",

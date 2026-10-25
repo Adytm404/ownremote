@@ -3,8 +3,20 @@ const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
-// OWNREMOTE_DATA_DIR: folder data alternatif (mis. instance kedua, demo, atau pengujian)
-const DATA_DIR = process.env.OWNREMOTE_DATA_DIR ? path.resolve(process.env.OWNREMOTE_DATA_DIR) : path.join(ROOT, 'data');
+
+// Lokasi data (config, perangkat, log):
+//   1. OWNREMOTE_DATA_DIR, bila diset (instance kedua, demo, pengujian)
+//   2. folder data/ di samping aplikasi, bila sudah ada (clone git lama tetap memakai datanya)
+//   3. %APPDATA%\OwnRemote: install lewat npm berada di node_modules yang terhapus saat update
+function resolveDataDir() {
+  if (process.env.OWNREMOTE_DATA_DIR) return path.resolve(process.env.OWNREMOTE_DATA_DIR);
+  const legacy = path.join(ROOT, 'data');
+  if (fs.existsSync(path.join(legacy, 'config.json'))) return legacy;
+  const appData = process.env.APPDATA || path.join(require('os').homedir(), 'AppData', 'Roaming');
+  return path.join(appData, 'OwnRemote');
+}
+
+const DATA_DIR = resolveDataDir();
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const DEVICES_FILE = path.join(DATA_DIR, 'devices.json');
 const RUNTIME_FILE = path.join(DATA_DIR, 'runtime.json');

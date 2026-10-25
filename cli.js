@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// OwnRemote - CLI utama.
-//   node cli.js          menu interaktif
-//   node cli.js run      jalankan server di terminal ini
-//   node cli.js start    jalankan server di background
-//   node cli.js stop     hentikan server
-//   node cli.js status   tampilkan status
+// OwnRemote - CLI utama (perintah `ownremote` setelah `npm install -g ownremote`).
+//   ownremote          menu interaktif
+//   ownremote run      jalankan server di terminal ini
+//   ownremote start    jalankan server di background
+//   ownremote stop     hentikan server
+//   ownremote status   tampilkan status
 const readline = require('readline');
 const fs = require('fs');
 const { execFile, spawn } = require('child_process');
@@ -540,7 +540,7 @@ async function advancedMenu() {
           } else {
             startup.enableStartup();
             ok('The server will start in the background at every Windows sign-in.');
-            console.log(paint('gray', `    ${startup.STARTUP_FILE}`));
+            console.log(paint('gray', `    ${startup.STARTUP_LOCATION}`));
             if (!st && await confirm('Start the server in the background now?')) await startBackground();
           }
           await pause();
@@ -774,11 +774,36 @@ async function mainMenu() {
 }
 
 // ---------------------------------------------------------------- entry
+const USAGE = `
+  ${paint('bold cyan', 'ownremote')} ${paint('gray', `v${require('./package.json').version}`)}  control your Windows PC from your phone
+
+  ${paint('bold', 'Usage')}
+    ownremote            interactive menu
+    ownremote run        run the server in this terminal
+    ownremote start      run the server in the background
+    ownremote stop       stop the server
+    ownremote status     show status, address and pairing code
+    ownremote --version  print the version
+    ownremote --help     show this help
+
+  Data folder: ${config.DATA_DIR}
+`;
+
 async function main() {
+  const cmd = (process.argv[2] || '').toLowerCase();
+  // perintah info: tanpa efek samping (tidak membuat folder data)
+  if (['-v', '--version', 'version'].includes(cmd)) {
+    console.log(require('./package.json').version);
+    return exitApp();
+  }
+  if (['-h', '--help', 'help'].includes(cmd)) {
+    console.log(USAGE);
+    return exitApp();
+  }
+
   config.loadConfig();
   startup.refreshStartup();
 
-  const cmd = (process.argv[2] || '').toLowerCase();
   // Ctrl+D / stdin ditutup hanya mengakhiri program di mode interaktif
   if (cmd === '' || cmd === 'run') {
     rl.on('close', () => {
@@ -806,7 +831,8 @@ async function main() {
       return exitApp();
     }
     default:
-      console.log('Usage: node cli.js [run|start|stop|status]');
+      console.log(`  Unknown command: ${cmd}`);
+      console.log(USAGE);
       return exitApp(1);
   }
 }

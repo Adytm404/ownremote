@@ -5,9 +5,11 @@
 **Control your Windows PC from your phone**: trackpad, live keyboard and an opt-in screen preview,
 over your Wi-Fi or from anywhere through Cloudflare Tunnel. No app to install on the phone, no account, no native modules.
 
-<a href="docs/ownremote-trailer.mp4"><img src="docs/trailer-preview.gif" alt="OwnRemote trailer" width="820"></a>
+[![npm](https://img.shields.io/npm/v/ownremote?color=c6f45b&labelColor=0d0f14)](https://www.npmjs.com/package/ownremote) ![platform](https://img.shields.io/badge/platform-Windows-0d0f14?labelColor=0d0f14) [![license](https://img.shields.io/badge/license-MIT-0d0f14?labelColor=0d0f14)](https://github.com/Adytm404/ownremote/blob/main/LICENSE)
 
-[▶ Watch the full trailer (48 s, MP4)](docs/ownremote-trailer.mp4)
+<a href="https://github.com/Adytm404/ownremote/blob/main/docs/ownremote-trailer.mp4"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/trailer-preview.gif" alt="OwnRemote trailer" width="820"></a>
+
+[▶ Watch the full trailer (48 s, MP4)](https://github.com/Adytm404/ownremote/blob/main/docs/ownremote-trailer.mp4)
 
 </div>
 
@@ -29,23 +31,23 @@ over your Wi-Fi or from anywhere through Cloudflare Tunnel. No app to install on
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/phone-pair.png" width="190"><br><sub>Pair with a code</sub></td>
-    <td align="center"><img src="docs/screenshots/phone-trackpad.png" width="190"><br><sub>Trackpad</sub></td>
-    <td align="center"><img src="docs/screenshots/phone-keyboard.png" width="190"><br><sub>Live keyboard</sub></td>
-    <td align="center"><img src="docs/screenshots/phone-screen.png" width="190"><br><sub>Screen preview</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/phone-pair.png" width="190"><br><sub>Pair with a code</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/phone-trackpad.png" width="190"><br><sub>Trackpad</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/phone-keyboard.png" width="190"><br><sub>Live keyboard</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/phone-screen.png" width="190"><br><sub>Screen preview</sub></td>
   </tr>
 </table>
 
-<p align="center"><img src="docs/screenshots/cli-main.png" width="640" alt="CLI dashboard"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/cli-main.png" width="640" alt="CLI dashboard"></p>
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/cli-sessions.png" width="420"><br><sub>Session / device management</sub></td>
-    <td align="center"><img src="docs/screenshots/cli-tunnel.png" width="420"><br><sub>Cloudflare Tunnel</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/cli-sessions.png" width="420"><br><sub>Session / device management</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/cli-tunnel.png" width="420"><br><sub>Cloudflare Tunnel</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/cli-advanced.png" width="420"><br><sub>Advanced settings</sub></td>
-    <td align="center"><img src="docs/screenshots/cli-settings.png" width="420"><br><sub>Settings</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/cli-advanced.png" width="420"><br><sub>Advanced settings</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/Adytm404/ownremote/main/docs/screenshots/cli-settings.png" width="420"><br><sub>Settings</sub></td>
   </tr>
 </table>
 
@@ -61,13 +63,26 @@ over your Wi-Fi or from anywhere through Cloudflare Tunnel. No app to install on
 ## Quick start
 
 ```bat
+npm install -g ownremote
+ownremote
+```
+
+That's it: `ownremote` opens the dashboard from any Command Prompt, PowerShell or Windows Terminal window.
+Update later with `npm install -g ownremote@latest`.
+
+<details>
+<summary>Run from source instead</summary>
+
+```bat
 git clone https://github.com/Adytm404/ownremote.git
 cd ownremote
 npm install
 npm start
 ```
 
-Or just double-click **`start.bat`** (it installs dependencies on the first run).
+Or double-click **`start.bat`** (it installs dependencies on the first run).
+
+</details>
 
 1. Choose **[1] Run in this terminal** or **[2] Run in the background**.
 2. On your phone, open the address shown under **Open on phone** (or scan the QR code in *Session management*; it fills the code in for you).
@@ -110,11 +125,12 @@ Fine-tune frames per second (1–15), resolution and image quality in ⚙ → *P
 ## CLI
 
 ```text
-node cli.js            interactive menu
-node cli.js run        run the server in this terminal
-node cli.js start      run the server in the background
-node cli.js stop       stop the server
-node cli.js status     show status
+ownremote              interactive menu
+ownremote run          run the server in this terminal
+ownremote start        run the server in the background
+ownremote stop         stop the server
+ownremote status       show status, address and pairing code
+ownremote --help       all commands and the data folder
 ```
 
 Main menu: run in terminal / background, session & device management, stop, and **Settings** (port, pairing code, firewall rule, server log, data folder, **Advanced settings** and **Cloudflare Tunnel**).
@@ -164,7 +180,7 @@ The helpers are long-running PowerShell processes that compile small C# classes 
 
 ## Configuration
 
-Everything lives in `data/` next to the app (git-ignored): `config.json`, `devices.json`, `server.log`. Set `OWNREMOTE_DATA_DIR` to use another folder (for a second instance, for example).
+Settings, paired devices and the log live in `%APPDATA%\OwnRemote` (`config.json`, `devices.json`, `server.log`), so updating the package keeps your phones paired. A source checkout that already has a `data/` folder keeps using it. Set `OWNREMOTE_DATA_DIR` to use another folder (for a second instance, for example). `ownremote --help` prints the folder in use.
 
 ## Troubleshooting
 
@@ -194,4 +210,4 @@ The phone interface is currently in Indonesian; the CLI is in English.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/Adytm404/ownremote/blob/main/LICENSE)
