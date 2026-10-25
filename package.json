@@ -1,6 +1,6 @@
 {
   "name": "ownremote",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Control your Windows PC from your phone: trackpad, live keyboard and screen preview over LAN or Cloudflare Tunnel.",
   "keywords": [
     "remote",
